@@ -11,6 +11,12 @@ import xappy
 
 from os.path import join, dirname
 
+import ConfigParser
+
+import sqlalchemy
+from sqlalchemy.ext.sqlsoup import SqlSoup
+from sqlalchemy import MetaData
+
 from utils import filter_search_string
 from fedora.client import PackageDB, ServerError
 from rpmcache import RPMCache
@@ -41,6 +47,33 @@ class Indexer(object):
             self.pkgdb_client = PackageDB(base_url=pkgdb_url)
         else:
             self.pkgdb_client = PackageDB()
+
+
+    def config(self):
+        config = ConfigParser.ConfigParser()
+        config.read('/etc/pkgdb.cfg')
+        dburi = config.get('global', 'sqlalchemy.dburi')
+
+        return dburi.replace('"','')
+
+    def mdata(self):
+        dburi = self.config()
+        engine = sqlalchemy.create_engine(dburi)
+
+        return SqlSoup(MetaData(engine))
+
+    def pkgdb_update(self, yum_pkgs):
+        db = self.mdata()
+        pkg_count = 0
+        for pkg in yum_pkgs.values():
+
+            pkg_count += 1
+            summary = pkg['summary']
+            description = pkg['description']
+
+            print '%d: Updating package table %s' % (pkg_count, pkg['name'])
+            db.package.filter(db.package.name==pkg['name']).\
+                       update({'summary':summary, 'description':description})
 
     def create_index(self):
         """ Create a new index, and set up its field structure """
@@ -368,6 +401,7 @@ class Indexer(object):
             processed_doc._data = None
             self.iconn.add(processed_doc)
 
+        self.pkgdb_update(yum_pkgs)
         self.icon_cache.close()
 
         return pkg_count
