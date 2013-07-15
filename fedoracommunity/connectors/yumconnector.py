@@ -160,7 +160,9 @@ class YumConnector(IConnector, ICall, ISearch, IQuery):
 
         return pkg
 
-    def _pkgtuples_to_rows(self, pkgtuples, _eq='=', _gt='>', _lt='<', _ge='>=', _le='<=', find_provided_by=False):
+    def _pkgtuples_to_rows(self, pkgtuples, _eq='\\u003D', _gt='\\u003E',
+                           _lt='\\u003C', _ge='\\u003E\\u003D',
+                           _le='\\u003C\\u003D', find_provided_by=False):
         rows = []
 
         for pkg in pkgtuples:
